@@ -29,6 +29,22 @@ class NhaMayController {
         await NhaMay.findByIdAndUpdate(req.params.id, { dangHoatDong: false });
         res.json({ success: true, message: 'Đã ngừng hợp tác nhà máy' });
     }
+    static async ngungHopTac(req, res) {
+        const nhaMay = await NhaMay.findByIdAndUpdate(req.params.id, { dangHoatDong: false }, { new: true });
+
+        if (!nhaMay) {
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy nhà máy',
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Đã ngừng hợp tác nhà máy',
+            data: nhaMay,
+        });
+    }
 }
 
 module.exports = NhaMayController;

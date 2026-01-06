@@ -3,6 +3,7 @@
 const PhieuThu = require('../models/phieuThu.model');
 const HoaDon = require('../models/hoaDon.model');
 const KhachHang = require('../models/khachHang.model');
+const phieuThuModel = require('../models/phieuThu.model');
 
 class PhieuThuController {
     static async tao(req, res) {
@@ -23,8 +24,52 @@ class PhieuThuController {
     }
 
     static async danhSach(req, res) {
-        const data = await PhieuThu.find().sort({ ngayTao: -1 });
-        res.json({ success: true, data });
+        const { maKhachHang, khachHangId, maPhieuThu } = req.query;
+
+        const filter = {};
+
+        if (maPhieuThu) {
+            filter.maPhieuThu = { $regex: maPhieuThu, $options: 'i' };
+        }
+
+        if (khachHangId) {
+            filter.khachHangId = khachHangId;
+        }
+
+        let query = PhieuThu.find(filter)
+            // 1️⃣ populate KHÁCH HÀNG
+            .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai')
+            // 2️⃣ populate HÓA ĐƠN
+            .populate({
+                path: 'phanBoHoaDons.hoaDonId',
+                select: `
+                maHoaDon 
+                ngayGiao 
+                tongTienHoaDon 
+                daThu 
+                conNo 
+                chiTietSanPhams
+            `,
+            })
+            .sort({ ngayThu: -1 });
+
+        // 3️⃣ Query theo mã khách hàng
+        if (maKhachHang) {
+            const KhachHang = require('../models/khachHang.model');
+
+            const khIds = await KhachHang.find({
+                maKhachHang: { $regex: maKhachHang, $options: 'i' },
+            }).distinct('_id');
+
+            query = query.where('khachHangId').in(khIds);
+        }
+
+        const data = await query;
+
+        res.json({
+            success: true,
+            data,
+        });
     }
 }
 

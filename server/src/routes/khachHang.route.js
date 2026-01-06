@@ -10,5 +10,6 @@ router.get('/', auth, khachHangController.danhSach);
 router.post('/', auth, khachHangController.tao);
 router.put('/:id', auth, khachHangController.capNhat);
 router.patch('/:id/trang-thai', auth, khachHangController.doiTrangThai);
+router.delete('/:id', auth, khachHangController.xoa);
 
 module.exports = router;
