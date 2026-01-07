@@ -7,20 +7,61 @@ const phieuThuModel = require('../models/phieuThu.model');
 
 class PhieuThuController {
     static async tao(req, res) {
-        const phieuThu = await PhieuThu.create(req.body);
-        for (const pb of phieuThu.phanBoHoaDons) {
-            await HoaDon.findByIdAndUpdate(pb.hoaDonId, {
-                $inc: { daThu: pb.soTien, conNo: -pb.soTien },
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            const { khachHangId, soTienThu, phanBoHoaDons = [], ghiChu } = req.body;
+            const khachHang = await KhachHang.findById(khachHangId).session(session);
+            if (!khachHang) {
+                throw new Error('Không tìm thấy khách hàng');
+            }
+            const congNoTruoc = khachHang.congNoHienTai || 0;
+            // 2️⃣ Tạo phiếu thu
+            const [phieuThu] = await phieuThuModel.create([{ khachHangId, soTienThu, phanBoHoaDons, ghiChu }], { session });
+            // 3️⃣ (KHÔNG BẮT BUỘC) cập nhật hóa đơn để hiển thị / đối soát
+            for (const pb of phanBoHoaDons) {
+                await HoaDon.findByIdAndUpdate(pb.hoaDonId, { $inc: { daThu: pb.soTien } }, { session });
+            }
+            // 4️⃣ TÍNH CÔNG NỢ SAU (CỐT LÕI)
+            const congNoSau = soTienThu >= congNoTruoc ? 0 : congNoTruoc - soTienThu;
+            // 5️⃣ Cập nhật công nợ khách hàng
+            await KhachHang.findByIdAndUpdate(khachHangId, { congNoHienTai: congNoSau }, { session });
+            // 6️⃣ Tạo ghi chú lịch sử
+            const ghiChuLichSu = taoGhiChuThuTien({
+                soTienThu,
+                congNoTruoc,
+                ghiChu,
+            });
+            // 7️⃣ Lưu lịch sử công nợ
+            await LichSuCongNo.create(
+                [
+                    {
+                        khachHangId,
+                        loaiPhatSinh: 'THU_TIEN',
+                        soTienPhatSinh: -soTienThu,
+                        congNoTruoc,
+                        congNoSau,
+                        phieuThuId: phieuThu._id,
+                        ghiChu: ghiChuLichSu,
+                    },
+                ],
+                { session },
+            );
+            await session.commitTransaction();
+            session.endSession();
+            res.status(201).json({
+                success: true,
+                message: 'Thu tiền thành công',
+                data: phieuThu,
+            });
+        } catch (error) {
+            await session.abortTransaction();
+            session.endSession();
+            res.status(400).json({
+                success: false,
+                message: error.message,
             });
         }
-        await KhachHang.findByIdAndUpdate(phieuThu.khachHangId, {
-            $inc: { congNoHienTai: -phieuThu.soTienThu },
-        });
-        res.status(201).json({
-            success: true,
-            message: 'Thu tiền thành công',
-            data: phieuThu,
-        });
     }
 
     static async danhSach(req, res) {

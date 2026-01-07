@@ -15,6 +15,8 @@ app.use(
             process.env.URL_CLIENT, // domain frontend từ biến môi trường
             'http://127.0.0.1:5173', // cho phép chạy local
             'http://localhost:5173',
+            'http://localhost:8080',
+            'https://id-preview-34b2d89a--6fbd9563-51d0-4164-a3d5-0783fcf61869.lovable.app',
         ],
         credentials: true, // Cho phép gửi cookie, auth header...
     }),
