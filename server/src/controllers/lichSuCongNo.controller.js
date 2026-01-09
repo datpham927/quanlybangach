@@ -3,20 +3,24 @@
 const LichSuCongNo = require('../models/lichSuCongNo.model');
 
 class LichSuCongNoController {
-    /* ======================= DANH SÁCH LỊCH SỬ CÔNG NỢ ======================= */
     static async danhSach(req, res) {
         try {
-            const { khachHangId, loaiPhatSinh } = req.query;
+            const { khachHangId, loaiPhatSinh, ngay } = req.query;
             const filter = {};
-
             if (khachHangId) {
                 filter.khachHangId = khachHangId;
             }
-
             if (loaiPhatSinh) {
                 filter.loaiPhatSinh = loaiPhatSinh;
             }
-
+            if (ngay) {
+                const startOfDay = new Date(`${ngay}T00:00:00.000Z`);
+                const endOfDay = new Date(`${ngay}T23:59:59.999Z`);
+                filter.thoiGian = {
+                    $gte: startOfDay,
+                    $lte: endOfDay,
+                };
+            }
             const data = await LichSuCongNo.find(filter)
                 .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai')
                 .populate('hoaDonId', 'maHoaDon tongTienHoaDon')

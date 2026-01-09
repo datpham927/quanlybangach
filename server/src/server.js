@@ -9,10 +9,11 @@ require('dotenv').config(); // Load biến môi trường từ file .env
 const app = express(); // Khởi tạo ứng dụng Express
 
 // ✅ Cấu hình CORS để cho phép các domain nhất định gọi API
-app.use(cors({
-    origin: '*',
-}));
-
+app.use(
+    cors({
+        origin: '*',
+    }),
+);
 
 // ✅ Khởi tạo các middleware
 app.use(cookieParser()); // Phân tích cookie

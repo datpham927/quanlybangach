@@ -21,6 +21,26 @@ class NhaMayController {
             });
         }
     }
+    static async danhSachCongKhai(req, res) {
+        try {
+            const data = await NhaMay.find({
+                dangHoatDong: true,
+            })
+                .select('tenNhaMay soDienThoai diaChi') // chỉ field public
+                .sort({ tenNhaMay: 1 });
+
+            return res.json({
+                success: true,
+                data,
+            });
+        } catch (err) {
+            console.error('danhSachCongKhai error:', err);
+            return res.status(500).json({
+                success: false,
+                message: err.message,
+            });
+        }
+    }
     static async tao(req, res) {
         try {
             const last = await NhaMay.findOne().sort({ ngayTao: -1 });

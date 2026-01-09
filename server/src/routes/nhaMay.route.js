@@ -10,6 +10,7 @@ router.get('/', auth, nhaMayController.danhSach);
 router.post('/', auth, nhaMayController.tao);
 router.put('/:id', auth, nhaMayController.capNhat);
 router.delete('/:id', auth, nhaMayController.xoa);
+router.get('/cong-khai', nhaMayController.danhSachCongKhai);
 router.patch('/:id/toggle-hop-tac', auth, nhaMayController.toggleHopTac);
 
 module.exports = router;

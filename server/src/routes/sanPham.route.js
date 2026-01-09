@@ -13,4 +13,6 @@ router.post('/', auth, SanPhamController.tao);
 router.put('/:id', auth, SanPhamController.capNhat);
 router.patch('/:id/hien-thi', auth, SanPhamController.hienThi);
 router.delete('/:id', auth, SanPhamController.xoa);
+router.get('/top-luot-xem', SanPhamController.topLuotXem);
+
 module.exports = router;

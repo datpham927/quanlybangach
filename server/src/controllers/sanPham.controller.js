@@ -144,13 +144,20 @@ class SanPhamController {
             });
         }
     }
-
     static async chiTietCongKhai(req, res) {
         try {
-            const sanPham = await SanPham.findOne({
-                _id: req.params.id,
-                hienThi: true,
-            }).populate('nhaMayId', 'tenNhaMay soDienThoai diaChi');
+            const sanPham = await SanPham.findOneAndUpdate(
+                {
+                    _id: req.params.id,
+                    hienThi: true,
+                },
+                {
+                    $inc: { luotXem: 1 }, // 🔥 TĂNG +1
+                },
+                {
+                    new: true, // trả về document sau khi update
+                },
+            ).populate('nhaMayId', 'tenNhaMay soDienThoai diaChi');
 
             if (!sanPham) {
                 return res.status(404).json({
@@ -211,6 +218,27 @@ class SanPhamController {
             res.status(500).json({
                 success: false,
                 message: 'Lỗi khi xóa sản phẩm',
+                error: error.message,
+            });
+        }
+    }
+    static async topLuotXem(req, res) {
+        try {
+            const data = await SanPham.find({
+                hienThi: true,
+            })
+                .sort({ luotXem: -1 })
+                .limit(4)
+                .populate('nhaMayId', 'tenNhaMay');
+
+            res.json({
+                success: true,
+                data,
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: 'Lỗi khi lấy top sản phẩm nhiều lượt xem',
                 error: error.message,
             });
         }

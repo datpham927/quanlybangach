@@ -1,15 +1,17 @@
 function taoGhiChuThuTien({ soTienThu, congNoTruoc, ghiChu }) {
-    let ghiChuHeThong = '';
-    if (soTienThu < congNoTruoc) {
-        ghiChuHeThong = 'Thu tiền (trả một phần công nợ)';
-    } else if (soTienThu === congNoTruoc) {
-        ghiChuHeThong = 'Thu tiền (tất toán công nợ)';
-    } else {
-        ghiChuHeThong = 'Thu tiền (khách trả dư / trả trước)';
+    let noiDung = `Thu tiền ${soTienThu.toLocaleString()}đ`;
+
+    if (congNoTruoc > 0) {
+        noiDung += ` | Công nợ trước: ${congNoTruoc.toLocaleString()}đ`;
+        const congNoSau = soTienThu >= congNoTruoc ? 0 : congNoTruoc - soTienThu;
+        noiDung += ` → sau: ${congNoSau.toLocaleString()}đ`;
     }
-    if (ghiChu && ghiChu.trim()) {
-        return `${ghiChuHeThong} - ${ghiChu}`;
+
+    if (ghiChu) {
+        noiDung += ` | Ghi chú: ${ghiChu}`;
     }
-    return ghiChuHeThong;
+
+    return noiDung;
 }
-module.exports = taoGhiChuThuTien;
+
+module.exports = { taoGhiChuThuTien };

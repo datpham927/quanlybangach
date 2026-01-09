@@ -6,7 +6,7 @@ const { Schema } = mongoose;
 const LichSuCongNoSchema = new Schema(
     {
         khachHangId: { type: Schema.Types.ObjectId, ref: 'KhachHang', required: true },
-        loaiPhatSinh: { type: String, enum: ['HOA_DON', 'THU_TIEN', 'DIEU_CHINH'], required: true },
+        loaiPhatSinh: { type: String, enum: ['HOA_DON', 'THU_TIEN', 'DIEU_CHINH', 'TAO_HOA_DON'], required: true },
         soTienPhatSinh: { type: Number, required: true },
         // Quy ước:
         // + số dương  → tăng công nợ

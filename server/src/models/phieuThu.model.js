@@ -26,12 +26,4 @@ const PhieuThuSchema = new Schema(
     },
 );
 
-PhieuThuSchema.pre('save', function (next) {
-    const tong = this.phanBoHoaDons.reduce((s, i) => s + i.soTien, 0);
-    if (tong !== this.soTienThu) {
-        return next(new Error('Tong phan bo khong bang so tien thu'));
-    }
-    next();
-});
-
 module.exports = mongoose.model('PhieuThu', PhieuThuSchema);
