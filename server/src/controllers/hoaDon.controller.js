@@ -68,6 +68,27 @@ class HoaDonController {
         await HoaDon.findByIdAndUpdate(req.params.id, { daKhoa: true });
         res.json({ success: true, message: 'Đã khóa hóa đơn' });
     }
+    static async chiTiet(req, res) {
+    const { id } = req.params;
+
+    const hoaDon = await HoaDon.findById(id)
+        .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai diaChi')
+        .populate('nhaMayId', 'maNhaMay tenNhaMay')
+        .lean();
+
+    if (!hoaDon) {
+        return res.status(404).json({
+            success: false,
+            message: 'Không tìm thấy hóa đơn',
+        });
+    }
+
+    res.json({
+        success: true,
+        data: hoaDon,
+    });
+}
+
 }
 
 module.exports = HoaDonController;
