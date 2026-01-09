@@ -8,6 +8,7 @@ const router = express.Router();
 
 router.get('/', auth, hoaDonController.danhSach);
 router.post('/', auth, hoaDonController.tao);
+router.get('/:id', HoaDonController.chiTiet);
 router.patch('/:id/khoa', auth, hoaDonController.khoa);
 
 module.exports = router;
