@@ -5,90 +5,176 @@ const ChuyenCho = require('../models/chuyenCho.model');
 const KhachHang = require('../models/khachHang.model');
 
 class HoaDonController {
+    /* ======================= TẠO HÓA ĐƠN ======================= */
     static async tao(req, res) {
-        const { nhaMayId, khachHangId, diaChiGiao, ngayGiao, chiTietSanPhams, ghiChu } = req.body;
+        try {
+            const {
+                nhaMayId,
+                khachHangId,
+                diaChiGiao,
+                ngayGiao,
+                chiTietSanPhams,
+                ghiChu,
+            } = req.body;
 
-        // 1️⃣ Sinh mã hóa đơn
-        const maHoaDon = `HD${Date.now()}`;
+            if (!nhaMayId || !khachHangId || !ngayGiao || !chiTietSanPhams?.length) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thiếu thông tin bắt buộc',
+                });
+            }
 
-        // 2️⃣ Gắn nhaMayId vào từng chi tiết sản phẩm
-        const chiTietDaXuLy = chiTietSanPhams.map((sp) => ({
-            ...sp,
-            nhaMayId,
-        }));
+            // 1️⃣ Sinh mã hóa đơn
+            const maHoaDon = `HD${Date.now()}`;
 
-        // 3️⃣ Tạo hóa đơn
-        const hoaDon = await HoaDon.create({
-            maHoaDon,
-            nhaMayId,
-            khachHangId,
-            diaChiGiao,
-            ngayGiao,
-            chiTietSanPhams: chiTietDaXuLy,
-            ghiChu,
-            nguoiTaoId: req.user?._id, // admin
-        });
+            // 2️⃣ Gắn nhaMayId vào từng chi tiết sản phẩm
+            const chiTietDaXuLy = chiTietSanPhams.map((sp) => ({
+                ...sp,
+                nhaMayId,
+            }));
 
-        // 4️⃣ Tạo chuyến chở (TỰ ĐỘNG)
-        await ChuyenCho.create({
-            hoaDonId: hoaDon._id,
-            ngayChuyen: hoaDon.ngayGiao,
-            nhaMayId: hoaDon.nhaMayId,
-            khachHangId: hoaDon.khachHangId,
-            danhSachGach: hoaDon.chiTietSanPhams,
-        });
+            // 3️⃣ Tạo hóa đơn
+            const hoaDon = await HoaDon.create({
+                maHoaDon,
+                nhaMayId,
+                khachHangId,
+                diaChiGiao,
+                ngayGiao,
+                chiTietSanPhams: chiTietDaXuLy,
+                ghiChu,
+                nguoiTaoId: req.user?._id,
+            });
 
-        // 5️⃣ Cập nhật công nợ khách hàng
-        const KhachHang = require('../models/khachHang.model');
-        await KhachHang.findByIdAndUpdate(khachHangId, {
-            $inc: { congNoHienTai: hoaDon.tongTienHoaDon },
-        });
+            // 4️⃣ Tạo chuyến chở tự động
+            await ChuyenCho.create({
+                hoaDonId: hoaDon._id,
+                ngayChuyen: hoaDon.ngayGiao,
+                nhaMayId: hoaDon.nhaMayId,
+                khachHangId: hoaDon.khachHangId,
+                danhSachGach: hoaDon.chiTietSanPhams,
+            });
 
-        res.status(201).json({
-            success: true,
-            message: 'Tạo hóa đơn thành công',
-            data: hoaDon,
-        });
-    }
-    static async danhSach(req, res) {
-        const { khachHangId } = req.query;
-        const filter = {};
-        if (khachHangId) {
-            filter.khachHangId = khachHangId;
+            // 5️⃣ Cập nhật công nợ khách hàng
+            await KhachHang.findByIdAndUpdate(khachHangId, {
+                $inc: { congNoHienTai: hoaDon.tongTienHoaDon },
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: 'Tạo hóa đơn thành công',
+                data: hoaDon,
+            });
+        } catch (error) {
+            console.error('❌ Lỗi tạo hóa đơn:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi server khi tạo hóa đơn',
+            });
         }
-        let query = HoaDon.find(filter).populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai').sort({ ngayTao: -1 });
-        const data = await query;
-        res.json({
-            success: true,
-            data,
-        });
     }
 
-    static async khoa(req, res) {
-        await HoaDon.findByIdAndUpdate(req.params.id, { daKhoa: true });
-        res.json({ success: true, message: 'Đã khóa hóa đơn' });
+    /* ======================= DANH SÁCH HÓA ĐƠN ======================= */
+    static async danhSach(req, res) {
+        try {
+            const { khachHangId } = req.query;
+            const filter = {};
+
+            if (khachHangId) {
+                filter.khachHangId = khachHangId;
+            }
+
+            const data = await HoaDon.find(filter)
+                .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai')
+                .sort({ ngayTao: -1 });
+
+            return res.json({
+                success: true,
+                data,
+            });
+        } catch (error) {
+            console.error('❌ Lỗi lấy danh sách hóa đơn:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể tải danh sách hóa đơn',
+            });
+        }
     }
+
+    /* ======================= CHI TIẾT HÓA ĐƠN ======================= */
     static async chiTiet(req, res) {
-    const { id } = req.params;
+        try {
+            const { id } = req.params;
 
-    const hoaDon = await HoaDon.findById(id)
-        .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai diaChi')
-        .populate('nhaMayId', 'maNhaMay tenNhaMay')
-        .lean();
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thiếu ID hóa đơn',
+                });
+            }
 
-    if (!hoaDon) {
-        return res.status(404).json({
-            success: false,
-            message: 'Không tìm thấy hóa đơn',
-        });
+            const hoaDon = await HoaDon.findById(id)
+                .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai diaChi')
+                .populate('nhaMayId', 'maNhaMay tenNhaMay')
+                .lean();
+
+            if (!hoaDon) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy hóa đơn',
+                });
+            }
+
+            return res.json({
+                success: true,
+                data: hoaDon,
+            });
+        } catch (error) {
+            console.error('❌ Lỗi lấy chi tiết hóa đơn:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể lấy chi tiết hóa đơn',
+            });
+        }
     }
 
-    res.json({
-        success: true,
-        data: hoaDon,
-    });
-}
+    /* ======================= KHÓA HÓA ĐƠN ======================= */
+    static async khoa(req, res) {
+        try {
+            const { id } = req.params;
 
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thiếu ID hóa đơn',
+                });
+            }
+
+            const hoaDon = await HoaDon.findByIdAndUpdate(
+                id,
+                { daKhoa: true },
+                { new: true }
+            );
+
+            if (!hoaDon) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy hóa đơn',
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: 'Đã khóa hóa đơn',
+                data: hoaDon,
+            });
+        } catch (error) {
+            console.error('❌ Lỗi khóa hóa đơn:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể khóa hóa đơn',
+            });
+        }
+    }
 }
 
 module.exports = HoaDonController;
