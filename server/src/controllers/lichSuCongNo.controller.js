@@ -3,40 +3,74 @@
 const LichSuCongNo = require('../models/lichSuCongNo.model');
 
 class LichSuCongNoController {
+    /* ======================= DANH SÁCH LỊCH SỬ CÔNG NỢ ======================= */
     static async danhSach(req, res) {
-        const { khachHangId, loaiPhatSinh } = req.query;
-        const filter = {};
-        if (khachHangId) {
-            filter.khachHangId = khachHangId;
-        }
-        if (loaiPhatSinh) {
-            filter.loaiPhatSinh = loaiPhatSinh;
-        }
-        const data = await LichSuCongNo.find(filter)
-            .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai')
-            .populate('hoaDonId', 'maHoaDon tongTienHoaDon')
-            .populate('phieuThuId', 'maPhieuThu soTienThu')
-            .sort({ thoiGian: -1 });
-        res.json({
-            success: true,
-            data,
-        });
-    }
-    static async chiTiet(req, res) {
-        const record = await LichSuCongNo.findById(req.params.id)
-            .populate('khachHangId', 'maKhachHang tenKhachHang')
-            .populate('hoaDonId', 'maHoaDon tongTienHoaDon')
-            .populate('phieuThuId', 'maPhieuThu soTienThu');
-        if (!record) {
-            return res.status(404).json({
+        try {
+            const { khachHangId, loaiPhatSinh } = req.query;
+            const filter = {};
+
+            if (khachHangId) {
+                filter.khachHangId = khachHangId;
+            }
+
+            if (loaiPhatSinh) {
+                filter.loaiPhatSinh = loaiPhatSinh;
+            }
+
+            const data = await LichSuCongNo.find(filter)
+                .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai')
+                .populate('hoaDonId', 'maHoaDon tongTienHoaDon')
+                .populate('phieuThuId', 'maPhieuThu soTienThu')
+                .sort({ thoiGian: -1 });
+
+            return res.json({
+                success: true,
+                data,
+            });
+        } catch (error) {
+            console.error('❌ Lỗi lấy danh sách lịch sử công nợ:', error);
+            return res.status(500).json({
                 success: false,
-                message: 'Không tìm thấy lịch sử công nợ',
+                message: 'Không thể tải danh sách lịch sử công nợ',
             });
         }
-        res.json({
-            success: true,
-            data: record,
-        });
+    }
+
+    /* ======================= CHI TIẾT LỊCH SỬ CÔNG NỢ ======================= */
+    static async chiTiet(req, res) {
+        try {
+            const { id } = req.params;
+
+            if (!id) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Thiếu ID lịch sử công nợ',
+                });
+            }
+
+            const record = await LichSuCongNo.findById(id)
+                .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai')
+                .populate('hoaDonId', 'maHoaDon tongTienHoaDon')
+                .populate('phieuThuId', 'maPhieuThu soTienThu');
+
+            if (!record) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy lịch sử công nợ',
+                });
+            }
+
+            return res.json({
+                success: true,
+                data: record,
+            });
+        } catch (error) {
+            console.error('❌ Lỗi lấy chi tiết lịch sử công nợ:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Không thể lấy chi tiết lịch sử công nợ',
+            });
+        }
     }
 }
 
