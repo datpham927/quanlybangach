@@ -24,7 +24,9 @@ class PhieuThuController {
            1️⃣ LẤY KHÁCH HÀNG
         ======================= */
             const khachHang = await KhachHang.findById(khachHangId).session(session);
-            if (!khachHang) throw new Error('Không tìm thấy khách hàng');
+            if (!khachHang) {
+                throw new Error('Không tìm thấy khách hàng');
+            }
 
             const congNoTruoc = khachHang.congNoHienTai || 0;
 
@@ -48,7 +50,7 @@ class PhieuThuController {
             }
 
             /* =======================
-           3️⃣ TẠO PHIẾU THU (CHƯA PHÂN BỔ)
+           3️⃣ TẠO PHIẾU THU
         ======================= */
             const [phieuThu] = await phieuThuModel.create(
                 [
@@ -58,15 +60,18 @@ class PhieuThuController {
                         ngayThu,
                         soTienThu,
                         ghiChu,
+                        phanBoHoaDons: [],
                     },
                 ],
                 { session },
             );
 
             /* =======================
-           4️⃣ TỰ ĐỘNG PHÂN BỔ TIỀN
+           4️⃣ TỰ ĐỘNG PHÂN BỔ FIFO
         ======================= */
             let soTienConLai = soTienThu;
+            let congNoHienTai = congNoTruoc;
+            const lichSuRecords = [];
 
             for (const hoaDon of hoaDons) {
                 if (soTienConLai <= 0) break;
@@ -81,6 +86,7 @@ class PhieuThuController {
                 if (daThuMoi > 0 && conNoMoi > 0) trangThai = 'THU_MOT_PHAN';
                 if (conNoMoi === 0) trangThai = 'DA_THU';
 
+                // 🔥 Cập nhật hóa đơn
                 await HoaDon.findByIdAndUpdate(
                     hoaDon._id,
                     {
@@ -91,7 +97,7 @@ class PhieuThuController {
                     { session },
                 );
 
-                // Lưu phân bổ vào phiếu thu (để xem lại)
+                // 🔥 Lưu phân bổ vào phiếu thu
                 await phieuThuModel.findByIdAndUpdate(
                     phieuThu._id,
                     {
@@ -107,35 +113,39 @@ class PhieuThuController {
                     { session },
                 );
 
+                // 🔥 GHI LỊCH SỬ CÔNG NỢ (THEO HÓA ĐƠN)
+                const congNoSau = congNoHienTai - soTienTra;
+
+                lichSuRecords.push({
+                    khachHangId,
+                    hoaDonId: hoaDon._id, // ✅ CÓ HÓA ĐƠN
+                    phieuThuId: phieuThu._id,
+                    loaiPhatSinh: 'THU_TIEN',
+                    soTienPhatSinh: -soTienTra,
+                    congNoTruoc: congNoHienTai,
+                    congNoSau,
+                    ghiChu: `Thu ${soTienTra.toLocaleString()}đ cho hóa đơn ${hoaDon.maHoaDon}`,
+                });
+
+                congNoHienTai = congNoSau;
                 soTienConLai -= soTienTra;
             }
 
             /* =======================
            5️⃣ CẬP NHẬT CÔNG NỢ KH
         ======================= */
-            const congNoSau = congNoTruoc - soTienThu;
-
-            await KhachHang.findByIdAndUpdate(khachHangId, { congNoHienTai: congNoSau }, { session });
+            await KhachHang.findByIdAndUpdate(khachHangId, { congNoHienTai: congNoHienTai }, { session });
 
             /* =======================
-           6️⃣ GHI LỊCH SỬ CÔNG NỢ
+           6️⃣ LƯU LỊCH SỬ CÔNG NỢ
         ======================= */
-            await lichSuCongNoModel.create(
-                [
-                    {
-                        khachHangId,
-                        loaiPhatSinh: 'THU_TIEN',
-                        soTienPhatSinh: -soTienThu,
-                        congNoTruoc,
-                        congNoSau,
-                        phieuThuId: phieuThu._id,
-                        ghiChu: `Thu tiền ${soTienThu.toLocaleString()}đ | Công nợ: ${congNoTruoc.toLocaleString()} → ${congNoSau.toLocaleString()}`,
-                    },
-                ],
-                { session },
-            );
+            if (lichSuRecords.length > 0) {
+                await lichSuCongNoModel.insertMany(lichSuRecords, { session });
+            }
+
             await session.commitTransaction();
             session.endSession();
+
             return res.status(201).json({
                 success: true,
                 message: 'Thu tiền thành công',

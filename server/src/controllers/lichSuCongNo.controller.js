@@ -14,8 +14,12 @@ class LichSuCongNoController {
                 filter.loaiPhatSinh = loaiPhatSinh;
             }
             if (ngay) {
-                const startOfDay = new Date(`${ngay}T00:00:00.000Z`);
-                const endOfDay = new Date(`${ngay}T23:59:59.999Z`);
+                const startOfDay = new Date(ngay);
+                startOfDay.setHours(0, 0, 0, 0);
+
+                const endOfDay = new Date(ngay);
+                endOfDay.setHours(23, 59, 59, 999);
+
                 filter.thoiGian = {
                     $gte: startOfDay,
                     $lte: endOfDay,
@@ -23,7 +27,10 @@ class LichSuCongNoController {
             }
             const data = await LichSuCongNo.find(filter)
                 .populate('khachHangId', 'maKhachHang tenKhachHang soDienThoai')
-                .populate('hoaDonId', 'maHoaDon tongTienHoaDon')
+                .populate({
+                    path: 'hoaDonId',
+                    select: 'maHoaDon ngayGiao tongTienHoaDon chiTietSanPhams',
+                })
                 .populate('phieuThuId', 'maPhieuThu soTienThu')
                 .sort({ thoiGian: -1 });
 

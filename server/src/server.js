@@ -28,6 +28,13 @@ const http = require('http'); // Chưa được import ở trên — thêm dòng
 // ✅ Kết nối database MongoDB
 require('./dbs/init.mongodb');
 // ✅ Khởi tạo các route
+
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        time: new Date().toISOString(),
+    });
+});
 app.use('/', require('./routes')); // Tất cả các route được xử lý ở thư mục ./routes
 // ✅ Xử lý lỗi không tìm thấy route
 app.use((req, res, next) => {

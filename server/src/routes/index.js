@@ -16,5 +16,4 @@ app.use('/api/chuyen-cho', require('./chuyenCho.route'));
 app.use('/api/dashboard', require('./dashboard.route'));
 // USER PUBLIC
 app.use('/api/san-pham', require('./sanPham.route'));
-
 module.exports = app;
